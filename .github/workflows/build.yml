@@ -25,16 +25,16 @@ jobs:
       - name: Find ASA API headers
         shell: pwsh
         run: |
-          Write-Host "Searching for Ark.h..."
-          Get-ChildItem asa-sdk -Recurse -File -Filter Ark.h |
+          Write-Host "Searching for CoreTypes.h..."
+          Get-ChildItem asa-sdk -Recurse -File -Filter CoreTypes.h |
             Select-Object -ExpandProperty FullName
+
+          Write-Host "Searching for Platform.h..."
+          Get-ChildItem asa-sdk -Recurse -File -Filter Platform.h |
+           Select-Object -ExpandProperty FullName
 
           Write-Host "Searching for AsaApi.h..."
           Get-ChildItem asa-sdk -Recurse -File -Filter AsaApi.h |
-            Select-Object -ExpandProperty FullName
-
-          Write-Host "Available directories:"
-          Get-ChildItem asa-sdk -Directory |
             Select-Object -ExpandProperty FullName
 
       - name: Compile plugin
