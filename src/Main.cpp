@@ -5,6 +5,7 @@
 
 #include <fstream>
 #include <string>
+#include <atomic>
 
 namespace {
 
@@ -27,9 +28,9 @@ bool hookedServer = false;
 bool hookedSuicide = false;
 bool blocking = false;
 
-// Limit diagnostic logging to avoid huge log files.
-int serverLogCount = 0;
-int suicideLogCount = 0;
+std::atomic<int> serverLogCount{0};
+std::atomic<int> suicideLogCount{0};
+
 constexpr int maxLogs = 10;
 
 void log(const char* message) {
@@ -46,12 +47,10 @@ void log(const char* message) {
 void __fastcall detourServer(
     AShooterPlayerController* player
 ) {
-    if (serverLogCount < maxLogs) {
-        log("ServerSuicide hook called");
-        ++serverLogCount;
-    }
-
     if (blocking) {
+        if (serverLogCount.fetch_add(1) < maxLogs) {
+            log("ServerSuicide BLOCKED");
+        }
         return;
     }
 
@@ -63,15 +62,12 @@ void __fastcall detourServer(
 void __fastcall detourSuicide(
     AShooterPlayerController* player
 ) {
-    if (suicideLogCount < maxLogs) {
-        log("Suicide hook called");
-        ++suicideLogCount;
+    if (blocking) {
+        if (suicideLogCount.fetch_add(1) < maxLogs) {
+            log("Suicide BLOCKED");
+        }
+        return;
     }
-
-if (blocking) {
-    log("IMPLANT TEST: Suicide function blocked");
-    return;
-}
 
     if (originalSuicide) {
         originalSuicide(player);
@@ -152,4 +148,5 @@ BOOL APIENTRY DllMain(
 ) {
     return TRUE;
 }
+
 
