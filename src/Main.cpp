@@ -1,8 +1,9 @@
-#include <windows.h>
-#include <fstream>
-#include <string>
 #include <API/ARK/Ark.h>
 #include <IHooks.h>
+
+#include <Windows.h>
+#include <fstream>
+#include <string>
 
 namespace {
 constexpr auto hookName = "AShooterPlayerController.ServerSuicide_Implementation()";
