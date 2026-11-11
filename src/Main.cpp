@@ -15,21 +15,30 @@ constexpr auto hookServer =
 constexpr auto hookSuicide =
     "AShooterPlayerController.Suicide()";
 
+constexpr auto hookImplant =
+    "AShooterCharacter.BPCanImplantSuicide()";
+
 constexpr auto folder =
     "ArkApi/Plugins/BlackBearsNoImplantSuicide/";
 
 using SuicideFn =
     void(__fastcall*)(AShooterPlayerController*);
 
+using ImplantFn =
+    bool(__fastcall*)(AShooterCharacter*);
+
 SuicideFn originalServer = nullptr;
 SuicideFn originalSuicide = nullptr;
+ImplantFn originalImplant = nullptr;
 
 bool hookedServer = false;
 bool hookedSuicide = false;
+bool hookedImplant = false;
 bool blocking = false;
 
 std::atomic<int> serverLogCount{0};
 std::atomic<int> suicideLogCount{0};
+std::atomic<int> implantLogCount{0};
 
 constexpr int maxLogs = 10;
 
@@ -72,6 +81,24 @@ void __fastcall detourSuicide(
     if (originalSuicide) {
         originalSuicide(player);
     }
+}
+
+bool __fastcall detourImplant(
+    AShooterCharacter* character
+) {
+    if (implantLogCount.fetch_add(1) < maxLogs) {
+        log("BPCanImplantSuicide hook called");
+    }
+
+    if (blocking) {
+        return false;
+    }
+
+    if (originalImplant) {
+        return originalImplant(character);
+    }
+
+    return false;
 }
 
 } // namespace
@@ -117,17 +144,28 @@ void Plugin_Init() {
         ? "Suicide hook installed"
         : "Suicide hook FAILED"
     );
+
+    hookedImplant = AsaApi::GetHooks().SetHook(
+        hookImplant,
+        reinterpret_cast<LPVOID>(&detourImplant),
+        &originalImplant
+    );
+
+    log(hookedImplant
+        ? "Implant hook installed"
+        : "Implant hook FAILED"
+    );
 }
 
 extern "C" __declspec(dllexport)
 void Plugin_Unload() {
 
-    if (hookedServer) {
+    if (hookedImplant) {
         AsaApi::GetHooks().DisableHook(
-            hookServer,
-            reinterpret_cast<LPVOID>(&detourServer)
+            hookImplant,
+            reinterpret_cast<LPVOID>(&detourImplant)
         );
-        hookedServer = false;
+        hookedImplant = false;
     }
 
     if (hookedSuicide) {
@@ -136,6 +174,14 @@ void Plugin_Unload() {
             reinterpret_cast<LPVOID>(&detourSuicide)
         );
         hookedSuicide = false;
+    }
+
+    if (hookedServer) {
+        AsaApi::GetHooks().DisableHook(
+            hookServer,
+            reinterpret_cast<LPVOID>(&detourServer)
+        );
+        hookedServer = false;
     }
 
     log("Plugin unloaded");
@@ -148,5 +194,3 @@ BOOL APIENTRY DllMain(
 ) {
     return TRUE;
 }
-
-
