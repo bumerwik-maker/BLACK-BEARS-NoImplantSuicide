@@ -68,9 +68,10 @@ void __fastcall detourSuicide(
         ++suicideLogCount;
     }
 
-    if (blocking) {
-        return;
-    }
+if (blocking) {
+    log("IMPLANT TEST: Suicide function blocked");
+    return;
+}
 
     if (originalSuicide) {
         originalSuicide(player);
