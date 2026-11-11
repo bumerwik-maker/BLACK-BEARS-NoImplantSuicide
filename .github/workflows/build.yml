@@ -1,4 +1,3 @@
-
 name: Build Windows ASA Plugin
 
 on:
@@ -14,6 +13,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Download ASA API headers
+        shell: pwsh
+        run: |
+          git clone --depth 1 https://github.com/ArkServerApi/AsaApi.git asa-sdk
+          if ($LASTEXITCODE -ne 0) {
+            throw "Failed to download ASA API"
+          }
+
       - name: Install fmt dependency
         shell: pwsh
         run: |
@@ -22,39 +29,53 @@ jobs:
             throw "Failed to download fmt"
           }
 
-      - name: Find ASA API headers
+      - name: Verify required files
         shell: pwsh
         run: |
+          $required = @(
+            "asa-sdk/AsaApi/Core/Public/API/ARK/Ark.h",
+            "src/Main.cpp",
+            "lib/AsaApi.lib",
+            "PluginInfo.json",
+            "mode.txt"
+          )
+
+          foreach ($file in $required) {
+            if (-not (Test-Path $file)) {
+              throw "Missing required file: $file"
+            }
+            Write-Host "FOUND: $file"
+          }
+
           Write-Host "Searching for CoreTypes.h..."
           Get-ChildItem asa-sdk -Recurse -File -Filter CoreTypes.h |
-            Select-Object -ExpandProperty FullName
-
-          Write-Host "Searching for Platform.h..."
-          Get-ChildItem asa-sdk -Recurse -File -Filter Platform.h |
-           Select-Object -ExpandProperty FullName
-
-          Write-Host "Searching for AsaApi.h..."
-          Get-ChildItem asa-sdk -Recurse -File -Filter AsaApi.h |
             Select-Object -ExpandProperty FullName
 
       - name: Compile plugin
         shell: cmd
         run: |
           call "%ProgramFiles%\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          if errorlevel 1 exit /b 1
+
           if not exist build mkdir build
-          cl /nologo /std:c++20 /EHsc /LD /MD /I"asa-sdk\AsaApi\Core\Public" /I"fmt-sdk\include" /I"asa-sdk\AsaApi\Core\Public\API\UE" /I"asa-sdk\AsaApi" /I"asa-sdk\AsaApi\include" src\Main.cpp /link /OUT:build\BlackBearsNoImplantSuicide.dll lib\AsaApi.lib
+
+          cl /nologo /std:c++20 /EHsc /LD /MD /I"asa-sdk\AsaApi\Core\Public" /I"asa-sdk\AsaApi\Core\Public\API\UE" /I"asa-sdk\AsaApi" /I"asa-sdk\AsaApi\include" /I"fmt-sdk\include" src\Main.cpp /link /OUT:build\BlackBearsNoImplantSuicide.dll lib\AsaApi.lib
+
+          if errorlevel 1 exit /b 1
 
       - name: Prepare test package
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force -Path package\BlackBearsNoImplantSuicide
-          Copy-Item build\BlackBearsNoImplantSuicide.dll package\BlackBearsNoImplantSuicide\
-          Copy-Item PluginInfo.json package\BlackBearsNoImplantSuicide\
-          Copy-Item mode.txt package\BlackBearsNoImplantSuicide\
+          New-Item -ItemType Directory -Force -Path package/BlackBearsNoImplantSuicide
+
+          Copy-Item build/BlackBearsNoImplantSuicide.dll package/BlackBearsNoImplantSuicide/
+          Copy-Item PluginInfo.json package/BlackBearsNoImplantSuicide/
+          Copy-Item mode.txt package/BlackBearsNoImplantSuicide/
 
       - name: Upload Windows DLL
         uses: actions/upload-artifact@v4
         with:
           name: BLACK-BEARS-NoImplantSuicide-Windows
           path: package/
+          if-no-files-found: error
 
