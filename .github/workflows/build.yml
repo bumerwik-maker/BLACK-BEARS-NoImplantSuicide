@@ -1,0 +1,44 @@
+
+name: Build Windows ASA Plugin
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download ASA API headers
+        shell: pwsh
+        run: |
+          git clone --depth 1 https://github.com/ArkServerApi/AsaApi.git asa-sdk
+          if ($LASTEXITCODE -ne 0) {
+            throw "Failed to download ASA API headers"
+          }
+
+      - name: Compile plugin
+        shell: cmd
+        run: |
+          call "%ProgramFiles%\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          if not exist build mkdir build
+          cl /nologo /std:c++20 /EHsc /LD /MD /I"asa-sdk\include" /I"asa-sdk" src\Main.cpp /link /OUT:build\BlackBearsNoImplantSuicide.dll lib\AsaApi.lib
+
+      - name: Prepare test package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path package\BlackBearsNoImplantSuicide
+          Copy-Item build\BlackBearsNoImplantSuicide.dll package\BlackBearsNoImplantSuicide\
+          Copy-Item PluginInfo.json package\BlackBearsNoImplantSuicide\
+          Copy-Item mode.txt package\BlackBearsNoImplantSuicide\
+
+      - name: Upload Windows DLL
+        uses: actions/upload-artifact@v4
+        with:
+          name: BLACK-BEARS-NoImplantSuicide-Windows
+          path: package/
