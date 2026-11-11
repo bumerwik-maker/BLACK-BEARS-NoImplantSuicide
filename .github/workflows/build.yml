@@ -22,6 +22,21 @@ jobs:
             throw "Failed to download ASA API headers"
           }
 
+      - name: Find ASA API headers
+        shell: pwsh
+        run: |
+          Write-Host "Searching for Ark.h..."
+          Get-ChildItem asa-sdk -Recurse -File -Filter Ark.h |
+            Select-Object -ExpandProperty FullName
+
+          Write-Host "Searching for AsaApi.h..."
+          Get-ChildItem asa-sdk -Recurse -File -Filter AsaApi.h |
+            Select-Object -ExpandProperty FullName
+
+          Write-Host "Available directories:"
+          Get-ChildItem asa-sdk -Directory |
+            Select-Object -ExpandProperty FullName
+
       - name: Compile plugin
         shell: cmd
         run: |
@@ -42,3 +57,4 @@ jobs:
         with:
           name: BLACK-BEARS-NoImplantSuicide-Windows
           path: package/
+
