@@ -32,21 +32,14 @@ void log(const char* line) {
     }
 }
 
-void __fastcall detour(
-    AShooterPlayerController* player
-) {
-    log("ServerSuicide_Implementation called");
-
+void __fastcall detour(AShooterPlayerController* player) {
     if (blocking) {
-        log("BLOCKED");
         return;
     }
 
     if (original) {
         original(player);
     }
-}
-
 }
 
 extern "C" __declspec(dllexport)
