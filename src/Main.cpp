@@ -1,4 +1,4 @@
-
+#include <windows.h>
 #include <API/ARK/Ark.h>
 #include <IHooks.h>
 
@@ -42,6 +42,8 @@ void __fastcall detour(AShooterPlayerController* player) {
     }
 }
 
+} // namespace
+
 extern "C" __declspec(dllexport)
 void Plugin_Init() {
 
@@ -64,7 +66,7 @@ void Plugin_Init() {
 
     hooked = AsaApi::GetHooks().SetHook(
         hookName,
-        reinterpret_cast<void*>(&detour),
+        reinterpret_cast<LPVOID>(&detour),
         &original
     );
 
@@ -80,9 +82,17 @@ void Plugin_Unload() {
     if (hooked) {
         AsaApi::GetHooks().DisableHook(
             hookName,
-            reinterpret_cast<void*>(&detour)
+            reinterpret_cast<LPVOID>(&detour)
         );
     }
 
     log("Unloaded");
+}
+
+BOOL APIENTRY DllMain(
+    HMODULE,
+    DWORD,
+    LPVOID
+) {
+    return TRUE;
 }
